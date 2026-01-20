@@ -38,7 +38,7 @@ Run `example.py` to generate a standard IRE model. This script demonstrates how 
 ```bash
 python example.py
 ```
-**Output**: `xfw.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits`, and corresponding PNG plots.
+**Output**: `example_cube.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits`, and corresponding PNG plots.
 
 #### Example Output
 <div align="center">

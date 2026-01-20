@@ -38,7 +38,7 @@ pip install numpy astropy matplotlib
 ```bash
 python example.py
 ```
-**输出**: `xfw.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits` 以及对应的 PNG 图片。
+**输出**: `example_cube.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits` 以及对应的 PNG 图片。
 
 #### 示例输出
 <div align="center">

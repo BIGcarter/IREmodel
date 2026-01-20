@@ -1,8 +1,10 @@
 test_xfw/
 fit_results_demo_rcb/
 grid_demo_output/
+__pycache__/
+.DS_Store/
 
-*.fits
-*.png
+debug*
+# *.png
 
 fit_test_xfw.py

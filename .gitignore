@@ -1,0 +1,6 @@
+test_xfw/
+fit_results_demo_rcb/
+grid_demo_output/
+
+*.fits
+*.png

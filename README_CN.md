@@ -40,6 +40,13 @@ python example.py
 ```
 **输出**: `xfw.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits` 以及对应的 PNG 图片。
 
+#### 示例输出
+<div align="center">
+  <img src="example_mom0.png" width="30%" alt="Moment 0" />
+  <img src="example_mom1.png" width="30%" alt="Moment 1" />
+  <img src="example_PV.png" width="30%" alt="PV Diagram" />
+</div>
+
 ### 2. 参数拟合演示
 运行 `fit_demo.py` 查看拟合引擎的工作流程。它会先生成一个“伪观测数据”，然后通过网格搜索恢复出设定的输入参数。
 

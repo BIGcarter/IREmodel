@@ -40,6 +40,13 @@ python example.py
 ```
 **Output**: `xfw.fits` (Cube), `example_PV.fits`, `example_mom0.fits`, `example_mom1.fits`, and corresponding PNG plots.
 
+#### Example Output
+<div align="center">
+  <img src="example_mom0.png" width="30%" alt="Moment 0" />
+  <img src="example_mom1.png" width="30%" alt="Moment 1" />
+  <img src="example_PV.png" width="30%" alt="PV Diagram" />
+</div>
+
 ### 2. Parameter Fitting Demo
 Run `fit_demo.py` to see the fitting engine in action. It generates a "fake" observation and then recovers the input parameters using a grid search.
 

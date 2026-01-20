@@ -68,7 +68,7 @@ def main():
     model = IREModel(params, npix=128, nvel=64)
     
     # 生成数据立方体 (Cube)
-    model.make_cube(output_filename="xfw.fits")
+    model.make_cube(output_filename="example_cube.fits")
     
     # 生成 PV 图
     model.make_pv(

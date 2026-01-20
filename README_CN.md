@@ -4,7 +4,7 @@
 
 [English Documentation](README.md)
 
-FERIA-Python 是 FERIA 模型的纯 Python 实现，专用于模拟和拟合原恒星周围的内落旋转包层 (IRE) 和开普勒盘的运动学特征。它提供了生成 3D 数据立方体 (Data Cube)、位置-速度图 (PV Diagram) 和矩图 (Moment Maps) 的工具，并包含一个强大的网格搜索拟合模块，用于从观测数据中反演物理参数。
+FERIA-Python 是 FERIA 模型的纯 Python 实现，专用于模拟和拟合原恒星周围的内落旋转包层 (IRE) 和开普勒盘的运动学特征。它提供了生成 3D 数据立方体 (Data Cube)、位置-速度图 (PV Diagram) 和矩图 (Moment Maps) 的工具，并包含一个简易的网格搜索拟合模块，用于从观测数据中反演物理参数。
 
 ## 功能特性
 
@@ -13,8 +13,8 @@ FERIA-Python 是 FERIA 模型的纯 Python 实现，专用于模拟和拟合原�
   - 生成 FITS 数据立方体 (RA, Dec, Velocity)。
   - 生成 PV 图和 Moment 0/1 图。
 - **可视化**: 自动生成 PNG 图片以便快速检查结果。
-- **拟合引擎**: 内置网格搜索框架，将模型与观测数据（Moment-1 速度场）进行拟合。
-  - 高效的内存计算（拟合过程中无需磁盘 I/O，速度极快）。
+- **拟合**: 内置网格搜索框架，将模型与观测数据（Moment-1 速度场）进行拟合。
+  - 高效的内存计算（拟合过程中无需磁盘 I/O）。
   - 自动计算损失函数（MSE/Chi-square）并可视化（1D 曲线，2D 热图）。
 - **纯 Python**: 基于 `numpy` 和 `astropy`，易于安装和二次开发。
 
@@ -48,12 +48,18 @@ python example.py
 </div>
 
 ### 2. 参数拟合演示
-运行 `fit_demo.py` 查看拟合引擎的工作流程。它会先生成一个“伪观测数据”，然后通过网格搜索恢复出设定的输入参数。
+运行 `fit_demo.py` 查看拟合的工作流程。它会先生成一个“伪观测数据”，然后通过网格搜索恢复出设定的输入参数。
 
 ```bash
 python fit_demo.py
 ```
 **输出**: `fit_results_demo_rcb/` 文件夹，包含损失函数热图（例如：质量 vs 离心半径）。
+
+#### 示例输出
+<div align="center">
+  <img src="fit_results_demo_rcb/fit_2d_mass_msun_rcb_au.png" width="30%" alt="Loss Mass vs RCB" />
+</div>
+
 
 ## 文件结构与功能说明
 

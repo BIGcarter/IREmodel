@@ -55,6 +55,11 @@ python fit_demo.py
 ```
 **Output**: `fit_results_demo_rcb/` folder containing loss heatmaps (e.g., Mass vs Centrifugal Radius).
 
+#### Example Output
+<div align="center">
+  <img src="fit_results_demo_rcb/fit_2d_mass_msun_rcb_au.png" width="30%" alt="Loss Mass vs RCB" />
+</div>
+
 ## File Structure & Description
 
 | File | Description |

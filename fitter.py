@@ -7,7 +7,7 @@ from params import SourceParams
 from config import CMPERKM
 
 class ModelFitter:
-    def __init__(self, obs_mom1_path, rms_noise=None, threshold=0.01):
+    def __init__(self, obs_mom1_path, rms_noise=None, threshold=0.01, mask_path=None, region_path=None):
         """
         Initialize the fitter with observational data.
         
@@ -17,10 +17,8 @@ class ModelFitter:
                                          If None, calculates MSE instead.
             threshold (float): Relative threshold (0.0-1.0) to mask weak signals in observation
                                if no explicit mask is provided in the FITS.
-                               Actually, we should use the model's intensity mask?
-                               Or mask the observation based on its own intensity?
-                               Assuming obs_mom1 is already masked or we use a simple region.
-                               Here we just read the data.
+            mask_path (str, optional): Path to a FITS file containing a mask (1=valid, 0=invalid).
+            region_path (str, optional): Path to a DS9 region file (.reg) to create a mask.
         """
         self.obs_mom1_path = obs_mom1_path
         self.rms_noise = rms_noise
@@ -37,6 +35,64 @@ class ModelFitter:
                 
             # Handle NaNs (common in Mom1 maps)
             self.obs_mask = ~np.isnan(self.obs_data)
+            
+            # Load explicit mask from FITS if provided
+            if mask_path:
+                with fits.open(mask_path) as m_hdul:
+                    mask_data = m_hdul[0].data
+                    if mask_data.ndim > 2:
+                        mask_data = mask_data.squeeze()
+                    
+                    if mask_data.shape != self.obs_data.shape:
+                        print(f"Warning: Mask shape {mask_data.shape} mismatch with Obs {self.obs_data.shape}. Resizing not implemented.")
+                    else:
+                        # Combine with NaN mask
+                        explicit_mask = (mask_data > 0.5)
+                        self.obs_mask = self.obs_mask & explicit_mask
+                        print(f"Loaded mask from {mask_path}. Valid pixels: {np.sum(self.obs_mask)}")
+            
+            # Load mask from DS9 Region file if provided
+            if region_path:
+                try:
+                    import regions
+                    from astropy.wcs import WCS
+                    
+                    # Read region file
+                    # format='ds9' is standard
+                    regs = regions.Regions.read(region_path, format='ds9')
+                    
+                    # Create WCS object from header
+                    wcs = WCS(self.obs_header)
+                    # If obs_data was squeezed (e.g. from 3D to 2D), WCS might need slicing
+                    # Assuming standard Mom1 FITS with 2D WCS or compatible 3D WCS
+                    if wcs.naxis > 2:
+                        wcs = wcs.dropaxis(2) # Drop freq/vel axis if present
+                    
+                    # Create empty mask
+                    ny, nx = self.obs_data.shape
+                    combined_region_mask = np.zeros((ny, nx), dtype=bool)
+                    
+                    print(f"Loading regions from {region_path}...")
+                    for i, reg in enumerate(regs):
+                        # Convert to pixel region
+                        pix_reg = reg.to_pixel(wcs)
+                        # Create mask for this region
+                        # mode='center' is faster, 'exact' is more precise. 'center' is usually fine for fitting.
+                        mask_i = pix_reg.to_mask(mode='center')
+                        
+                        # Add to full mask
+                        # to_image(shape) puts the mask back into the full array
+                        combined_region_mask = combined_region_mask | mask_i.to_image((ny, nx)).astype(bool)
+                        
+                    # Apply to obs_mask
+                    # Region defines VALID area (True inside)
+                    self.obs_mask = self.obs_mask & combined_region_mask
+                    print(f"Applied region mask. Valid pixels: {np.sum(self.obs_mask)}")
+                    
+                except ImportError:
+                    print("Error: 'regions' package not installed. Cannot parse .reg file.")
+                except Exception as e:
+                    print(f"Error parsing region file: {e}")
             
             # If rms is provided, we can compute Chi2
             # Chi2 = Sum( (Obs - Model)^2 / RMS^2 )
@@ -91,7 +147,7 @@ class ModelFitter:
             mse = np.mean(np.square(diff))
             return mse
 
-def fit_grid(obs_file, template_params, param_grid, output_dir="fit_output", npix=128, nvel=64):
+def fit_grid(obs_file, template_params, param_grid, output_dir="fit_output", npix=128, nvel=64, mask_file=None, region_file=None):
     """
     Perform grid search fitting.
     
@@ -100,12 +156,14 @@ def fit_grid(obs_file, template_params, param_grid, output_dir="fit_output", npi
         template_params (dict): Base parameters for the model.
         param_grid (dict): Dictionary of varying parameters (e.g. {'mass': [1,2], 'inc': [30,40]}).
         output_dir (str): Directory to save plots.
+        mask_file (str, optional): Path to a FITS mask file.
+        region_file (str, optional): Path to a DS9 region file (.reg).
     """
     import os
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
-    fitter = ModelFitter(obs_file)
+    fitter = ModelFitter(obs_file, mask_path=mask_file, region_path=region_file)
     
     # Prepare Grid
     keys = list(param_grid.keys())

@@ -81,13 +81,18 @@ def main():
     # Ensure template has correct fixed Rout
     base_params['rout_au'] = 15000.0
     
+    # Optional: Create a dummy mask for demonstration
+    # In reality, user provides a mask FITS file
+    # Here we just pass None, but the API supports mask_file="path/to/mask.fits"
+    
     fit_grid(
         obs_file=obs_file,
         template_params=base_params,
         param_grid=grid,
         output_dir="fit_results_demo_rcb",
         npix=128,
-        nvel=64
+        nvel=64,
+        mask_file=None # Replace with actual mask path if available
     )
     
     print("Done! Check fit_results_demo_rcb/ for plots.")

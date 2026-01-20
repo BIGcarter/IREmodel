@@ -1,6 +1,6 @@
 # FERIA-Python
 
-**FERIA (Formation of Envelope and Rotation In Astronomy) - Python Implementation**
+**FERIA (Flat Envelope Model with Rotation and Infall under Angular Momentum Conservation) - Python Implementation**
 
 [中文文档 (Chinese Documentation)](README_CN.md)
 

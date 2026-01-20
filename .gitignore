@@ -4,3 +4,5 @@ grid_demo_output/
 
 *.fits
 *.png
+
+fit_test_xfw.py

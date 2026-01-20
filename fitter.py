@@ -38,7 +38,7 @@ class ModelFitter:
             
             # Load explicit mask from FITS if provided
             if mask_path:
-                with fits.open(mask_path) as m_hdul:
+                with fits.open(mask_path, ignore_missing_simple=True) as m_hdul:
                     mask_data = m_hdul[0].data
                     if mask_data.ndim > 2:
                         mask_data = mask_data.squeeze()
@@ -51,15 +51,25 @@ class ModelFitter:
                         self.obs_mask = self.obs_mask & explicit_mask
                         print(f"Loaded mask from {mask_path}. Valid pixels: {np.sum(self.obs_mask)}")
             
-            # Load mask from DS9 Region file if provided
+            # Load mask from Region file if provided (DS9 or CRTF)
             if region_path:
                 try:
                     import regions
                     from astropy.wcs import WCS
                     
                     # Read region file
-                    # format='ds9' is standard
-                    regs = regions.Regions.read(region_path, format='ds9')
+                    # Auto-detect format or try DS9 then CRTF
+                    # The file might be named .fits but contain text (CRTF/DS9)
+                    
+                    try:
+                        regs = regions.Regions.read(region_path, format='ds9')
+                    except:
+                        try:
+                            regs = regions.Regions.read(region_path, format='crtf')
+                        except:
+                            # Fallback: try auto detection if possible or raise
+                            print("Could not determine region format (DS9/CRTF).")
+                            raise
                     
                     # Create WCS object from header
                     wcs = WCS(self.obs_header)
@@ -107,25 +117,29 @@ class ModelFitter:
         Calculate loss (MSE or Chi2) between Model and Observation.
         """
         # Ensure shapes match
-        if model_mom1.shape != self.obs_data.shape:
-            # model_mom1 from SkyPlane.calculate_moments is (nx, ny)
-            # FITS data is (ny, nx) usually
-            # FERIA C++ and Python io_utils.py flip the X-axis (RA) when writing to FITS
-            # To match Observation (which is a FITS file), we must apply the same transformation
-            # 1. Transpose to (ny, nx)
-            model_transformed = model_mom1.T
-            # 2. Flip X-axis (RA) to match FITS convention used in FERIA
-            model_transformed = model_transformed[:, ::-1]
-        else:
-            # If shape matches, assume it's already transformed?
-            # But here model_mom1 comes directly from memory (nx, ny).
-            # If obs_data is (128, 128) and model is (128, 128), 
-            # we STILL need to transpose/flip because internal axes != FITS axes.
-            model_transformed = model_mom1.T
-            model_transformed = model_transformed[:, ::-1]
+        # model_mom1 from SkyPlane.calculate_moments is (nx, ny)
+        # FERIA C++ and Python io_utils.py flip the X-axis (RA) when writing to FITS
+        # To match Observation (which is a FITS file), we must apply the same transformation
+        # 1. Transpose to (ny, nx)
+        model_transformed = model_mom1.T
+        # 2. Flip X-axis (RA) to match FITS convention used in FERIA
+        model_transformed = model_transformed[:, ::-1]
             
         if model_transformed.shape != self.obs_data.shape:
-             raise ValueError(f"Shape mismatch: Obs {self.obs_data.shape} vs Model {model_transformed.shape}")
+             # Handle shape mismatch by center cropping/padding
+             # Assuming both are centered on the source
+             obs_ny, obs_nx = self.obs_data.shape
+             mod_ny, mod_nx = model_transformed.shape
+             
+             if mod_ny >= obs_ny and mod_nx >= obs_nx:
+                 # Crop Model to match Obs
+                 start_y = (mod_ny - obs_ny) // 2
+                 start_x = (mod_nx - obs_nx) // 2
+                 model_transformed = model_transformed[start_y:start_y+obs_ny, start_x:start_x+obs_nx]
+             else:
+                 # Model is smaller? This shouldn't happen if we set npix large enough.
+                 # If it happens, raise error or pad model?
+                 raise ValueError(f"Shape mismatch: Obs {self.obs_data.shape} vs Model {model_transformed.shape}. Model must be larger or equal.")
 
         # Calculate Residuals on valid pixels (where Obs is not NaN)
         # Also maybe mask Model where it is zero?
@@ -257,5 +271,75 @@ def fit_grid(obs_file, template_params, param_grid, output_dir="fit_output", npi
         print(f"Saved 2D plot: {out_path}")
         
     else:
-        print("High-dimensional plotting not implemented yet (requires corner.py).")
-        # Could save results to CSV
+        # High-dimensional plotting using corner.py
+        try:
+            import corner
+            
+            # Prepare data for corner plot
+            # Corner plots usually show probability distributions P ~ exp(-0.5 * chi2)
+            # Or just samples weighted by likelihood.
+            # But we have grid samples.
+            
+            # We can treat this as discrete samples.
+            # Or just plot the loss as a color?
+            # Standard corner plots are for MCMC chains.
+            
+            # Alternative: Plot weighted corner plot
+            # Weights = exp(-Loss / (2*min_loss?)) or just 1/Loss
+            
+            data = np.array([r[:-1] for r in results]) # Parameters
+            losses = np.array([r[-1] for r in results])
+            
+            # Simple weighting: exp(-0.5 * (Loss - min_loss)) if Loss is Chi2
+            # If Loss is MSE, scaling is arbitrary.
+            # Let's just use 1/Loss for visualization or exp(-Loss)
+            
+            # For grid search visualization, usually we just want to see where the minimum is.
+            # Let's compute a "likelihood"
+            min_loss = np.nanmin(losses)
+            # Avoid overflow, assume Loss is somewhat like Chi2
+            # If Loss is very large, likelihood -> 0
+            
+            # Heuristic scaling for visibility
+            # Normalize loss to 0-1 range?
+            # weights = np.exp(-(losses - min_loss))
+            
+            # Actually, corner.corner expects samples.
+            # We can resample based on weights to generate a "chain"
+            
+            # Better approach for grid: just plot all points but color by loss?
+            # corner.py doesn't support scatter color easily in histograms.
+            
+            # Let's generate a "best fit" corner plot by resampling
+            # This is a bit hacky but gives the visual representation of probability
+            
+            # Assume Loss ~ Chi2
+            # Likelihood L ~ exp(-0.5 * Loss)
+            # If Loss is MSE, we need an estimate of sigma^2 to convert to Chi2
+            # Chi2 = N_pix * MSE / sigma^2
+            # Let's assume sigma approx sqrt(MSE_min) for scaling?
+            
+            # Let's use a simpler approach: 
+            # Weighted samples
+            weights = np.exp(-0.5 * (losses - min_loss))
+            
+            # Resample
+            # Create a large number of samples
+            n_samples = 10000
+            probs = weights / np.sum(weights)
+            indices = np.random.choice(len(losses), size=n_samples, p=probs)
+            samples = data[indices]
+            
+            fig = corner.corner(samples, labels=keys, show_titles=True, 
+                                title_fmt=".2f", plot_datapoints=False, fill_contours=True)
+            
+            fig.suptitle(f"Corner Plot (Resampled from Grid, Min Loss={min_loss:.4f})", fontsize=14)
+            
+            out_path = f"{output_dir}/fit_corner.png"
+            fig.savefig(out_path)
+            print(f"Saved Corner plot: {out_path}")
+            
+        except ImportError:
+            print("Error: 'corner' package not installed. Skipping corner plot.")
+        except Exception as e:
+            print(f"Error plotting corner: {e}")

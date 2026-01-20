@@ -57,7 +57,7 @@ python fit_demo.py
 
 #### 示例输出
 <div align="center">
-  <img src="fit_results_demo_rcb/fit_2d_mass_msun_rcb_au.png" width="30%" alt="Loss Mass vs RCB" />
+  <img src="fit_2d_mass_msun_rcb_au.png" width="30%" alt="Loss Mass vs RCB" />
 </div>
 
 
